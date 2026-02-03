@@ -55,32 +55,70 @@ const App: React.FC = () => {
   }, [preferences.theme]);
 
   useEffect(() => {
-    if (!lastSync) {
-      setNews(generateMockNews());
-    }
+    if (isOnboarded) {
+      if (!lastSync) {
+        setNews(generateMockNews());
+      }
 
-    const FOUR_HOURS = 4 * 60 * 60 * 1000;
-    if (isOnboarded && (!lastSync || (Date.now() - lastSync > FOUR_HOURS))) {
-      syncAll();
+      const FOUR_HOURS = 4 * 60 * 60 * 1000;
+      if (!lastSync || (Date.now() - lastSync > FOUR_HOURS)) {
+        syncAll();
+      }
     }
   }, [isOnboarded, lastSync, syncAll, setNews]);
 
   // Global Notification Engine
   useEffect(() => {
+    if (!preferences.notificationsEnabled) return;
+
     const checkNotifications = () => {
-      if (!preferences.notificationsEnabled) return;
-      
       const next = getNextNews(news);
       if (!next) return;
 
       const diff = differenceInSeconds(new Date(next.time), new Date());
       const triggerSeconds = preferences.notifyMinutesBefore * 60;
 
-      // Check for exact window (or within a 5s window to be safe for interval drift)
-      if (diff > 0 && diff <= triggerSeconds && diff > triggerSeconds - 10) {
-        // We track a simple session storage key to prevent duplicate alerts for the same event
+      // Trigger if within the notification window (e.g., 15 mins before)
+      // We check if the difference is between triggerSeconds and triggerSeconds - 60s
+      if (diff > 0 && diff <= triggerSeconds && diff > triggerSeconds - 60) {
         const alertedKey = `alerted-${next.id}`;
-        if (!sessionStorage.getItem(alertedKey)) {
+        if (!localStorage.getItem(alertedKey)) {
           new Notification(`News Guard: High Impact Alert`, {
             body: `${next.title} (${next.currency}) in ${preferences.notifyMinutesBefore} minutes. Volatility expected.`,
-            icon: 'https://cdn-icons-png.flaticon.com/512/
+            icon: '/favicon.ico'
+          });
+          localStorage.setItem(alertedKey, 'true');
+        }
+      }
+    };
+
+    const interval = setInterval(checkNotifications, 30000); // Check every 30 seconds
+    return () => clearInterval(interval);
+  }, [news, preferences.notificationsEnabled, preferences.notifyMinutesBefore]);
+
+  return (
+    <Router>
+      <Routes>
+        <Route 
+          path="/onboarding" 
+          element={!isOnboarded ? <Onboarding /> : <Navigate to="/" replace />} 
+        />
+        <Route 
+          path="/" 
+          element={isOnboarded ? <Dashboard /> : <Navigate to="/onboarding" replace />} 
+        />
+        <Route 
+          path="/notrade" 
+          element={isOnboarded ? <NoTradeConfigPage /> : <Navigate to="/onboarding" replace />} 
+        />
+        <Route 
+          path="/settings" 
+          element={isOnboarded ? <Settings /> : <Navigate to="/onboarding" replace />} 
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Router>
+  );
+};
+
+export default App;
