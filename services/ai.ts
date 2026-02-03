@@ -92,6 +92,37 @@ export async function getPairRiskScores(news: NewsEvent[], pairs: string[]): Pro
   }
 }
 
+export async function getTradeOfTheDay(news: NewsEvent[], sentiments: SentimentData[]): Promise<any> {
+  const ai = getAIAnalyst();
+  const context = news.filter(n => n.impact === Impact.HIGH).map(n => n.title).join(", ");
+  const sentContext = sentiments.map(s => `${s.pair}: ${s.bias}`).join(", ");
+  
+  const prompt = `Based on news: ${context} and sentiments: ${sentContext}, identify the single best high-probability trade setup for today. 
+  Return as JSON:
+  {
+    "pair": "PAIR NAME",
+    "bias": "BULLISH/BEARISH",
+    "rationale": "One brief reason why",
+    "levels": {
+      "entry": "Approx Price",
+      "target": "Take Profit",
+      "stop": "Stop Loss"
+    }
+  }`;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: prompt,
+    config: { responseMimeType: "application/json" }
+  });
+
+  try {
+    return JSON.parse(response.text || "null");
+  } catch (e) {
+    return null;
+  }
+}
+
 export async function getRiskAssessment(event: NewsEvent): Promise<string> {
   const ai = getAIAnalyst();
   const prompt = `As a professional hedge fund risk manager, explain the expected market reaction and volatility pattern for the upcoming economic event: "${event.title}" (${event.currency}). 

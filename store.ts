@@ -4,12 +4,24 @@ import { persist } from 'zustand/middleware';
 import { AppPreferences, Impact, NewsEvent, SentimentData } from './types';
 import { NO_TRADE_RULES } from './constants';
 
+export interface TradeSetup {
+  pair: string;
+  bias: 'BULLISH' | 'BEARISH';
+  rationale: string;
+  levels: {
+    entry: string;
+    target: string;
+    stop: string;
+  };
+}
+
 interface AppState {
   isOnboarded: boolean;
   preferences: AppPreferences;
   news: NewsEvent[];
   sentiments: SentimentData[];
   riskScores: Record<string, number>;
+  tradeOfTheDay: TradeSetup | null;
   groundingSources: any[];
   lastSync: number | null;
   isSyncing: boolean;
@@ -20,6 +32,7 @@ interface AppState {
   setNews: (news: NewsEvent[], sources?: any[]) => void;
   setSentiments: (sentiments: SentimentData[]) => void;
   setRiskScores: (scores: Record<string, number>) => void;
+  setTradeOfTheDay: (trade: TradeSetup | null) => void;
   setIsSyncing: (isSyncing: boolean) => void;
   togglePair: (pairId: string) => void;
   toggleImpact: (impact: Impact) => void;
@@ -45,6 +58,7 @@ export const useAppStore = create<AppState>()(
       news: [],
       sentiments: [],
       riskScores: {},
+      tradeOfTheDay: null,
       groundingSources: [],
       lastSync: null,
       isSyncing: false,
@@ -64,6 +78,7 @@ export const useAppStore = create<AppState>()(
 
       setSentiments: (sentiments) => set({ sentiments }),
       setRiskScores: (riskScores) => set({ riskScores }),
+      setTradeOfTheDay: (tradeOfTheDay) => set({ tradeOfTheDay }),
 
       setIsSyncing: (isSyncing) => set({ isSyncing }),
 
@@ -87,6 +102,7 @@ export const useAppStore = create<AppState>()(
         news: [],
         sentiments: [],
         riskScores: {},
+        tradeOfTheDay: null,
         groundingSources: [],
         lastSync: null
       }),

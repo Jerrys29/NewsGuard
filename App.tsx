@@ -7,7 +7,7 @@ import Dashboard from './pages/Dashboard';
 import Settings from './pages/Settings';
 import NoTradeConfigPage from './pages/NoTradeConfigPage';
 import { generateMockNews, getNextNews } from './utils';
-import { fetchLiveNewsWithSearch, getMarketSentiment, getPairRiskScores } from './services/ai';
+import { fetchLiveNewsWithSearch, getMarketSentiment, getPairRiskScores, getTradeOfTheDay } from './services/ai';
 import { differenceInSeconds } from 'date-fns';
 
 const App: React.FC = () => {
@@ -17,38 +17,56 @@ const App: React.FC = () => {
     setNews, 
     setSentiments, 
     setRiskScores, 
+    setTradeOfTheDay,
     lastSync, 
     setIsSyncing,
     news,
     updatePreferences
   } = useAppStore();
 
-  const syncAll = useCallback(async () => {
+  const syncAll = useCallback(async (force = false) => {
+    const STALE_THRESHOLD = 4 * 60 * 60 * 1000;
+    const now = Date.now();
+    
+    if (!force && lastSync && (now - lastSync < STALE_THRESHOLD)) {
+      return;
+    }
+
     setIsSyncing(true);
     try {
-      // 1. Fetch News via Search Grounding
       const newsResult = await fetchLiveNewsWithSearch();
       setNews(newsResult.news, newsResult.sources);
       
-      // 2. Fetch Analysis & Risks based on news context
       const pairs = preferences.selectedPairs;
-      const [sentimentResult, scoresResult] = await Promise.all([
+      const [sentimentResult, scoresResult, tradeResult] = await Promise.all([
         getMarketSentiment(newsResult.news, pairs),
-        getPairRiskScores(newsResult.news, pairs)
+        getPairRiskScores(newsResult.news, pairs),
+        getTradeOfTheDay(newsResult.news, []) // Simplified context for trade of the day
       ]);
       
       setSentiments(sentimentResult);
       setRiskScores(scoresResult);
+      setTradeOfTheDay(tradeResult);
     } catch (e) {
-      console.error("Critical: Global synchronization failed", e);
-      // Fallback to mock data if it's the first time and it fails
+      console.error("Global sync failed", e);
       if (!lastSync) {
         setNews(generateMockNews());
       }
     } finally {
       setIsSyncing(false);
     }
-  }, [preferences.selectedPairs, setIsSyncing, setNews, setSentiments, setRiskScores, lastSync]);
+  }, [preferences.selectedPairs, setIsSyncing, setNews, setSentiments, setRiskScores, setTradeOfTheDay, lastSync]);
+
+  // Handle Visibility and Lifecycle
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        syncAll();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [syncAll]);
 
   // Handle Theme Application
   useEffect(() => {
@@ -63,25 +81,18 @@ const App: React.FC = () => {
     }
   }, [preferences.theme]);
 
-  // Automated Sync Strategy
+  // Initial Sync
   useEffect(() => {
     if (isOnboarded) {
-      const FOUR_HOURS = 4 * 60 * 60 * 1000;
-      const isStale = !lastSync || (Date.now() - lastSync > FOUR_HOURS);
-      
-      if (isStale) {
-        syncAll();
-      }
+      syncAll();
     }
-  }, [isOnboarded, lastSync, syncAll]);
+  }, [isOnboarded, syncAll]);
 
-  // Notification Health & Execution
+  // Notification Engine
   useEffect(() => {
     if (!preferences.notificationsEnabled) return;
 
-    // Check permission status
     if (Notification.permission === 'denied') {
-      console.warn("Notifications are enabled in app but denied by browser.");
       updatePreferences({ notificationsEnabled: false });
       return;
     }
@@ -90,18 +101,16 @@ const App: React.FC = () => {
       const next = getNextNews(news);
       if (!next) return;
 
-      const releaseTime = new Date(next.time);
-      const diff = differenceInSeconds(releaseTime, new Date());
+      const diff = differenceInSeconds(new Date(next.time), new Date());
       const notifyWindowSeconds = preferences.notifyMinutesBefore * 60;
 
-      // Logic: Notify if the event is happening exactly within the next 30s window of the set threshold
       if (diff > 0 && diff <= notifyWindowSeconds && diff > (notifyWindowSeconds - 30)) {
-        const alertedKey = `notified-${next.id}-${preferences.notifyMinutesBefore}`;
+        const alertedKey = `notified-${next.id}`;
         if (!localStorage.getItem(alertedKey)) {
-          new Notification(`⚠️ Trading Alert: ${next.currency}`, {
-            body: `${next.title} in ${preferences.notifyMinutesBefore}m. High volatility expected.`,
+          new Notification(`⚠️ News Alert: ${next.currency}`, {
+            body: `${next.title} in ${preferences.notifyMinutesBefore}m. Check risk analysis.`,
             icon: '/favicon.ico',
-            tag: next.id, // Replace old notifications for same event
+            tag: next.id,
             requireInteraction: true
           });
           localStorage.setItem(alertedKey, 'true');
@@ -109,7 +118,7 @@ const App: React.FC = () => {
       }
     };
 
-    const interval = setInterval(checkAndNotify, 20000); // Check every 20s
+    const interval = setInterval(checkAndNotify, 30000);
     return () => clearInterval(interval);
   }, [news, preferences.notificationsEnabled, preferences.notifyMinutesBefore, updatePreferences]);
 
