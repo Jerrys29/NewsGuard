@@ -9,6 +9,7 @@ interface AppState {
   preferences: AppPreferences;
   news: NewsEvent[];
   sentiments: SentimentData[];
+  riskScores: Record<string, number>;
   groundingSources: any[];
   lastSync: number | null;
   isSyncing: boolean;
@@ -18,6 +19,7 @@ interface AppState {
   updatePreferences: (prefs: Partial<AppPreferences>) => void;
   setNews: (news: NewsEvent[], sources?: any[]) => void;
   setSentiments: (sentiments: SentimentData[]) => void;
+  setRiskScores: (scores: Record<string, number>) => void;
   setIsSyncing: (isSyncing: boolean) => void;
   togglePair: (pairId: string) => void;
   toggleImpact: (impact: Impact) => void;
@@ -25,7 +27,7 @@ interface AppState {
 }
 
 const DEFAULT_PREFS: AppPreferences = {
-  selectedPairs: ['EURUSD', 'XAUUSD'],
+  selectedPairs: ['EURUSD', 'XAUUSD', 'GBPUSD'],
   impactFilters: [Impact.HIGH, Impact.MEDIUM],
   alwaysIncludeUSD: true,
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -42,6 +44,7 @@ export const useAppStore = create<AppState>()(
       preferences: DEFAULT_PREFS,
       news: [],
       sentiments: [],
+      riskScores: {},
       groundingSources: [],
       lastSync: null,
       isSyncing: false,
@@ -60,6 +63,7 @@ export const useAppStore = create<AppState>()(
       }),
 
       setSentiments: (sentiments) => set({ sentiments }),
+      setRiskScores: (riskScores) => set({ riskScores }),
 
       setIsSyncing: (isSyncing) => set({ isSyncing }),
 
@@ -82,6 +86,7 @@ export const useAppStore = create<AppState>()(
         preferences: DEFAULT_PREFS, 
         news: [],
         sentiments: [],
+        riskScores: {},
         groundingSources: [],
         lastSync: null
       }),

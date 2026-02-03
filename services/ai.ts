@@ -7,7 +7,7 @@ export const getAIAnalyst = () => new GoogleGenAI({ apiKey: process.env.API_KEY!
 export async function fetchLiveNewsWithSearch(): Promise<{ news: NewsEvent[], sources: any[] }> {
   const ai = getAIAnalyst();
   const today = new Date().toISOString().split('T')[0];
-
+  
   const prompt = `Find the high-impact economic news events for today (${today}) and the next 24 hours. 
   Focus on USD, EUR, GBP, and JPY. Return the data as a JSON array of objects with the following structure:
   {
@@ -21,7 +21,7 @@ export async function fetchLiveNewsWithSearch(): Promise<{ news: NewsEvent[], so
   }`;
 
   const response = await ai.models.generateContent({
-    model: "gemini-2.0-flash-exp",
+    model: "gemini-3-flash-preview",
     contents: prompt,
     config: {
       tools: [{ googleSearch: {} }],
@@ -59,7 +59,7 @@ export async function getMarketSentiment(news: NewsEvent[], pairs: string[]): Pr
   }`;
 
   const response = await ai.models.generateContent({
-    model: "gemini-2.0-flash-exp",
+    model: "gemini-3-flash-preview",
     contents: prompt,
     config: {
       responseMimeType: "application/json",
@@ -73,6 +73,25 @@ export async function getMarketSentiment(news: NewsEvent[], pairs: string[]): Pr
   }
 }
 
+export async function getPairRiskScores(news: NewsEvent[], pairs: string[]): Promise<Record<string, number>> {
+  const ai = getAIAnalyst();
+  const context = news.map(n => `${n.currency}: ${n.impact}`).join(", ");
+  const prompt = `Assign a Risk Score from 0 to 10 (10 being extreme volatility risk) for each of these pairs: ${pairs.join(", ")}, based on these upcoming news impacts: ${context}. 
+  Return as a simple JSON object: {"EURUSD": 8, "XAUUSD": 9, ...}`;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: prompt,
+    config: { responseMimeType: "application/json" }
+  });
+
+  try {
+    return JSON.parse(response.text || "{}");
+  } catch (e) {
+    return {};
+  }
+}
+
 export async function getRiskAssessment(event: NewsEvent): Promise<string> {
   const ai = getAIAnalyst();
   const prompt = `As a professional hedge fund risk manager, explain the expected market reaction and volatility pattern for the upcoming economic event: "${event.title}" (${event.currency}). 
@@ -83,7 +102,7 @@ export async function getRiskAssessment(event: NewsEvent): Promise<string> {
   Keep it concise and formatted in professional markdown.`;
 
   const response = await ai.models.generateContent({
-    model: "gemini-2.0-flash-exp",
+    model: "gemini-3-flash-preview",
     contents: prompt,
   });
 
@@ -93,7 +112,7 @@ export async function getRiskAssessment(event: NewsEvent): Promise<string> {
 export async function generateAudioBriefing(news: NewsEvent[]): Promise<string | undefined> {
   const ai = getAIAnalyst();
   const highImpact = news.filter(n => n.impact === Impact.HIGH);
-
+  
   if (highImpact.length === 0) return undefined;
 
   const eventsSummary = highImpact.map(n => `${n.title} for the ${n.currency} at ${n.time.toLocaleTimeString()}`).join(". ");
@@ -102,13 +121,13 @@ export async function generateAudioBriefing(news: NewsEvent[]): Promise<string |
   Be professional and alert.`;
 
   const response = await ai.models.generateContent({
-    model: "gemini-2.0-flash-exp",
+    model: "gemini-2.5-flash-preview-tts",
     contents: [{ parts: [{ text: prompt }] }],
     config: {
       responseModalities: [Modality.AUDIO],
       speechConfig: {
         voiceConfig: {
-          prebuiltVoiceConfig: { voiceName: 'Kore' },
+          prebuiltVoiceConfig: { voiceName: 'Kore' }, 
         },
       },
     },
@@ -121,7 +140,7 @@ export async function getDailyTradingPlan(news: NewsEvent[], sentiments: Sentime
   const ai = getAIAnalyst();
   const newsContext = news.filter(n => n.impact === Impact.HIGH).map(n => n.title).join(", ");
   const sentimentContext = sentiments.map(s => `${s.pair}: ${s.bias} (${s.score}%)`).join(", ");
-
+  
   const prompt = `Generate a high-level daily trading strategy based on these news events: ${newsContext} and these sentiments: ${sentimentContext}. 
   Format as a professional brief with sections: 
   - OVERVIEW 
@@ -130,7 +149,7 @@ export async function getDailyTradingPlan(news: NewsEvent[], sentiments: Sentime
   Keep it very concise and actionable for a day trader. Use bold text for emphasis.`;
 
   const response = await ai.models.generateContent({
-    model: "gemini-2.0-flash-exp",
+    model: "gemini-3-flash-preview",
     contents: prompt,
   });
 

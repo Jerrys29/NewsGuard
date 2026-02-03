@@ -1,19 +1,49 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAppStore } from './store';
 import Onboarding from './pages/Onboarding';
 import Dashboard from './pages/Dashboard';
 import Settings from './pages/Settings';
 import NoTradeConfigPage from './pages/NoTradeConfigPage';
-import { generateMockNews } from './utils';
-import { fetchLiveNewsWithSearch, getMarketSentiment } from './services/ai';
+import { generateMockNews, getNextNews } from './utils';
+import { fetchLiveNewsWithSearch, getMarketSentiment, getPairRiskScores } from './services/ai';
+import { differenceInSeconds } from 'date-fns';
 
 const App: React.FC = () => {
-  const { isOnboarded, preferences, setNews, setSentiments, lastSync, setIsSyncing } = useAppStore();
+  const { 
+    isOnboarded, 
+    preferences, 
+    setNews, 
+    setSentiments, 
+    setRiskScores, 
+    lastSync, 
+    setIsSyncing,
+    news
+  } = useAppStore();
+
+  const syncAll = useCallback(async () => {
+    setIsSyncing(true);
+    try {
+      const newsResult = await fetchLiveNewsWithSearch();
+      setNews(newsResult.news, newsResult.sources);
+      
+      const [sentimentResult, scoresResult] = await Promise.all([
+        getMarketSentiment(newsResult.news, preferences.selectedPairs),
+        getPairRiskScores(newsResult.news, preferences.selectedPairs)
+      ]);
+      
+      setSentiments(sentimentResult);
+      setRiskScores(scoresResult);
+    } catch (e) {
+      console.error("Auto-sync failed", e);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [preferences.selectedPairs, setIsSyncing, setNews, setSentiments, setRiskScores]);
 
   useEffect(() => {
-    // Sync theme
+    // Theme application
     if (preferences.theme === 'dark') {
       document.documentElement.classList.add('dark');
     } else if (preferences.theme === 'light') {
@@ -25,52 +55,32 @@ const App: React.FC = () => {
   }, [preferences.theme]);
 
   useEffect(() => {
-    const handleInitialSync = async () => {
-      // If no data yet, load mock or attempt sync if onboarded
-      if (!lastSync) {
-        setNews(generateMockNews());
-      }
+    if (!lastSync) {
+      setNews(generateMockNews());
+    }
 
-      // Auto-sync if data is older than 4 hours
-      const FOUR_HOURS = 4 * 60 * 60 * 1000;
-      if (isOnboarded && (!lastSync || (Date.now() - lastSync > FOUR_HOURS))) {
-        setIsSyncing(true);
-        try {
-          const result = await fetchLiveNewsWithSearch();
-          setNews(result.news, result.sources);
-          const sentimentResult = await getMarketSentiment(result.news, preferences.selectedPairs);
-          setSentiments(sentimentResult);
-        } catch (e) {
-          console.error("Auto-sync failed", e);
-          setIsSyncing(false);
-        }
-      }
-    };
+    const FOUR_HOURS = 4 * 60 * 60 * 1000;
+    if (isOnboarded && (!lastSync || (Date.now() - lastSync > FOUR_HOURS))) {
+      syncAll();
+    }
+  }, [isOnboarded, lastSync, syncAll, setNews]);
 
-    handleInitialSync();
-  }, [isOnboarded, lastSync, setNews, setSentiments, setIsSyncing, preferences.selectedPairs]);
+  // Global Notification Engine
+  useEffect(() => {
+    const checkNotifications = () => {
+      if (!preferences.notificationsEnabled) return;
+      
+      const next = getNextNews(news);
+      if (!next) return;
 
-  return (
-    <Router>
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 overflow-x-hidden">
-        <Routes>
-          {!isOnboarded ? (
-            <>
-              <Route path="/onboarding" element={<Onboarding />} />
-              <Route path="*" element={<Navigate to="/onboarding" />} />
-            </>
-          ) : (
-            <>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/notrade" element={<NoTradeConfigPage />} />
-              <Route path="*" element={<Navigate to="/" />} />
-            </>
-          )}
-        </Routes>
-      </div>
-    </Router>
-  );
-};
+      const diff = differenceInSeconds(new Date(next.time), new Date());
+      const triggerSeconds = preferences.notifyMinutesBefore * 60;
 
-export default App;
+      // Check for exact window (or within a 5s window to be safe for interval drift)
+      if (diff > 0 && diff <= triggerSeconds && diff > triggerSeconds - 10) {
+        // We track a simple session storage key to prevent duplicate alerts for the same event
+        const alertedKey = `alerted-${next.id}`;
+        if (!sessionStorage.getItem(alertedKey)) {
+          new Notification(`News Guard: High Impact Alert`, {
+            body: `${next.title} (${next.currency}) in ${preferences.notifyMinutesBefore} minutes. Volatility expected.`,
+            icon: 'https://cdn-icons-png.flaticon.com/512/
