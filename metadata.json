@@ -1,0 +1,7 @@
+{
+  "name": "News Guard",
+  "description": "A premium economic news notification PWA for traders, providing real-time alerts for high-impact events like NFP, FOMC, and CPI with built-in 'No-Trade' safety rules and AI Risk Analysis.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
