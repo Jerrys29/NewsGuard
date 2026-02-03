@@ -1,21 +1,8 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { AppPreferences, Impact, NewsEvent, SentimentData } from './types';
+import { AppPreferences, Impact, NewsEvent, SentimentData, TradeSetup } from './types';
 import { NO_TRADE_RULES } from './constants';
-
-export type View = 'onboarding' | 'dashboard' | 'notrade' | 'settings';
-
-export interface TradeSetup {
-  pair: string;
-  bias: 'BULLISH' | 'BEARISH';
-  rationale: string;
-  levels: {
-    entry: string;
-    target: string;
-    stop: string;
-  };
-}
 
 interface AppState {
   isOnboarded: boolean;
@@ -27,8 +14,7 @@ interface AppState {
   groundingSources: any[];
   lastSync: number | null;
   isSyncing: boolean;
-  currentView: View;
-
+  
   // Actions
   completeOnboarding: () => void;
   updatePreferences: (prefs: Partial<AppPreferences>) => void;
@@ -40,7 +26,6 @@ interface AppState {
   togglePair: (pairId: string) => void;
   toggleImpact: (impact: Impact) => void;
   resetApp: () => void;
-  setCurrentView: (view: View) => void;
 }
 
 const DEFAULT_PREFS: AppPreferences = {
@@ -66,19 +51,18 @@ export const useAppStore = create<AppState>()(
       groundingSources: [],
       lastSync: null,
       isSyncing: false,
-      currentView: 'onboarding',
 
       completeOnboarding: () => set({ isOnboarded: true }),
-
+      
       updatePreferences: (newPrefs) => set((state) => ({
         preferences: { ...state.preferences, ...newPrefs }
       })),
 
-      setNews: (news, sources = []) => set({
-        news,
+      setNews: (news, sources = []) => set({ 
+        news, 
         groundingSources: sources,
         lastSync: Date.now(),
-        isSyncing: false
+        isSyncing: false 
       }),
 
       setSentiments: (sentiments) => set({ sentiments }),
@@ -101,19 +85,16 @@ export const useAppStore = create<AppState>()(
         return { preferences: { ...state.preferences, impactFilters: filters } };
       }),
 
-      resetApp: () => set({
-        isOnboarded: false,
-        preferences: DEFAULT_PREFS,
+      resetApp: () => set({ 
+        isOnboarded: false, 
+        preferences: DEFAULT_PREFS, 
         news: [],
         sentiments: [],
         riskScores: {},
         tradeOfTheDay: null,
         groundingSources: [],
-        lastSync: null,
-        currentView: 'onboarding'
+        lastSync: null
       }),
-
-      setCurrentView: (view) => set({ currentView: view }),
     }),
     {
       name: 'news-guard-storage',

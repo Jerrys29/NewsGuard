@@ -1,5 +1,6 @@
 
-import React, { useEffect, useCallback, useState } from 'react';
+import React, { useEffect, useCallback } from 'react';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAppStore } from './store';
 import Onboarding from './pages/Onboarding';
 import Dashboard from './pages/Dashboard';
@@ -9,37 +10,25 @@ import { generateMockNews, getNextNews } from './utils';
 import { fetchLiveNewsWithSearch, getMarketSentiment, getPairRiskScores, getTradeOfTheDay } from './services/ai';
 import { differenceInSeconds } from 'date-fns';
 
-type View = 'onboarding' | 'dashboard' | 'notrade' | 'settings';
-
 const App: React.FC = () => {
-  const {
-    isOnboarded,
-    preferences,
-    setNews,
-    setSentiments,
-    setRiskScores,
+  const { 
+    isOnboarded, 
+    preferences, 
+    setNews, 
+    setSentiments, 
+    setRiskScores, 
     setTradeOfTheDay,
-    lastSync,
+    lastSync, 
     setIsSyncing,
     news,
     updatePreferences
   } = useAppStore();
 
-  const [currentView, setCurrentView] = useState<View>(isOnboarded ? 'dashboard' : 'onboarding');
-
-  // Handle Initial view when onboarding status changes
-  useEffect(() => {
-    if (!isOnboarded) {
-      setCurrentView('onboarding');
-    } else if (currentView === 'onboarding') {
-      setCurrentView('dashboard');
-    }
-  }, [isOnboarded, currentView]);
-
   const syncAll = useCallback(async (force = false) => {
-    const STALE_THRESHOLD = 4 * 60 * 60 * 1000;
+    // Refresh if data is older than 30 minutes for a more "live" feeling
+    const STALE_THRESHOLD = 30 * 60 * 1000;
     const now = Date.now();
-
+    
     if (!force && lastSync && (now - lastSync < STALE_THRESHOLD)) {
       return;
     }
@@ -48,19 +37,19 @@ const App: React.FC = () => {
     try {
       const newsResult = await fetchLiveNewsWithSearch();
       setNews(newsResult.news, newsResult.sources);
-
+      
       const pairs = preferences.selectedPairs;
       const [sentimentResult, scoresResult, tradeResult] = await Promise.all([
         getMarketSentiment(newsResult.news, pairs),
         getPairRiskScores(newsResult.news, pairs),
-        getTradeOfTheDay(newsResult.news, []) // Simplified context for trade of the day
+        getTradeOfTheDay(newsResult.news, [])
       ]);
-
+      
       setSentiments(sentimentResult);
       setRiskScores(scoresResult);
       setTradeOfTheDay(tradeResult);
     } catch (e) {
-      console.error("Global sync failed", e);
+      console.error("Critical: Sync Engine Failed", e);
       if (!lastSync) {
         setNews(generateMockNews());
       }
@@ -69,90 +58,65 @@ const App: React.FC = () => {
     }
   }, [preferences.selectedPairs, setIsSyncing, setNews, setSentiments, setRiskScores, setTradeOfTheDay, lastSync]);
 
-  // Handle Visibility and Lifecycle
+  // Sync on mount and visibility
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        syncAll();
-      }
+    if (!isOnboarded) return;
+    
+    syncAll();
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') syncAll();
     };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [syncAll]);
-
-  // Handle Theme Application
-  useEffect(() => {
-    const root = window.document.documentElement;
-    if (preferences.theme === 'dark') {
-      root.classList.add('dark');
-    } else if (preferences.theme === 'light') {
-      root.classList.remove('dark');
-    } else {
-      const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      root.classList.toggle('dark', systemDark);
-    }
-  }, [preferences.theme]);
-
-  // Initial Sync
-  useEffect(() => {
-    if (isOnboarded) {
-      syncAll();
-    }
+    
+    window.addEventListener('visibilitychange', handleVisibility);
+    return () => window.removeEventListener('visibilitychange', handleVisibility);
   }, [isOnboarded, syncAll]);
 
   // Notification Engine
   useEffect(() => {
-    if (!preferences.notificationsEnabled) return;
+    if (!preferences.notificationsEnabled || !news.length) return;
 
-    if (Notification.permission === 'denied') {
-      updatePreferences({ notificationsEnabled: false });
-      return;
-    }
-
-    const checkAndNotify = () => {
+    const interval = setInterval(() => {
       const next = getNextNews(news);
       if (!next) return;
 
       const diff = differenceInSeconds(new Date(next.time), new Date());
-      const notifyWindowSeconds = preferences.notifyMinutesBefore * 60;
+      const targetSeconds = preferences.notifyMinutesBefore * 60;
 
-      if (diff > 0 && diff <= notifyWindowSeconds && diff > (notifyWindowSeconds - 30)) {
-        const alertedKey = `notified-${next.id}`;
-        if (!localStorage.getItem(alertedKey)) {
-          new Notification(`⚠️ News Alert: ${next.currency}`, {
-            body: `${next.title} in ${preferences.notifyMinutesBefore}m. Check risk analysis.`,
-            icon: '/favicon.ico',
+      if (diff > 0 && diff <= targetSeconds && diff > (targetSeconds - 30)) {
+        const key = `notified-${next.id}`;
+        if (!localStorage.getItem(key)) {
+          new Notification(`⚠️ Trading Alert: ${next.currency}`, {
+            body: `${next.title} in ${preferences.notifyMinutesBefore}m. Extreme volatility expected.`,
             tag: next.id,
             requireInteraction: true
           });
-          localStorage.setItem(alertedKey, 'true');
+          localStorage.setItem(key, 'true');
         }
       }
-    };
+    }, 15000);
 
-    const interval = setInterval(checkAndNotify, 30000);
     return () => clearInterval(interval);
-  }, [news, preferences.notificationsEnabled, preferences.notifyMinutesBefore, updatePreferences]);
+  }, [news, preferences.notificationsEnabled, preferences.notifyMinutesBefore]);
 
-  const renderView = () => {
-    switch (currentView) {
-      case 'onboarding':
-        return <Onboarding />;
-      case 'dashboard':
-        return <Dashboard />;
-      case 'notrade':
-        return <NoTradeConfigPage />;
-      case 'settings':
-        return <Settings />;
-      default:
-        return <Dashboard />;
-    }
-  };
+  // Theme Management
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (preferences.theme === 'dark') root.classList.add('dark');
+    else if (preferences.theme === 'light') root.classList.remove('dark');
+    else root.classList.toggle('dark', window.matchMedia('(prefers-color-scheme: dark)').matches);
+  }, [preferences.theme]);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 overflow-x-hidden">
-      {renderView()}
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/onboarding" element={!isOnboarded ? <Onboarding /> : <Navigate to="/" />} />
+        <Route path="/" element={isOnboarded ? <Dashboard /> : <Navigate to="/onboarding" />} />
+        <Route path="/notrade" element={isOnboarded ? <NoTradeConfigPage /> : <Navigate to="/onboarding" />} />
+        <Route path="/settings" element={isOnboarded ? <Settings /> : <Navigate to="/onboarding" />} />
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </Router>
   );
 };
 

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
-import { Mic, MicOff, X, Volume2, Loader2, MessageSquare } from 'lucide-react';
+import { Mic, MicOff, X, Loader2, MessageSquare } from 'lucide-react';
 import { Button } from './ui/Button';
 import { useAppStore } from '../store';
 import { decode, decodeAudioData, encode } from '../utils';
@@ -21,18 +21,44 @@ const LiveAnalyst: React.FC<LiveAnalystProps> = ({ onClose }) => {
   const sessionRef = useRef<any>(null);
   const nextStartTimeRef = useRef(0);
   const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
+  
+  // Refs for cleanup
+  const streamRef = useRef<MediaStream | null>(null);
+  const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
 
   const stopSession = () => {
+    // 1. Close the Gemini session
     if (sessionRef.current) {
       sessionRef.current.close();
       sessionRef.current = null;
     }
-    setIsActive(false);
-    setIsConnecting(false);
+
+    // 2. Stop microphone tracks
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+
+    // 3. Disconnect and clean up input audio nodes
+    if (sourceRef.current) {
+      sourceRef.current.disconnect();
+      sourceRef.current = null;
+    }
+    if (processorRef.current) {
+      processorRef.current.disconnect();
+      processorRef.current = null;
+    }
+
+    // 4. Stop any playing output audio
     for (const source of sourcesRef.current) {
       source.stop();
     }
     sourcesRef.current.clear();
+    nextStartTimeRef.current = 0;
+
+    setIsActive(false);
+    setIsConnecting(false);
   };
 
   const startSession = async () => {
@@ -58,24 +84,37 @@ const LiveAnalyst: React.FC<LiveAnalystProps> = ({ onClose }) => {
           setIsConnecting(false);
           
           // Start Microphone Streaming
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          const source = inputAudioContextRef.current!.createMediaStreamSource(stream);
-          const scriptProcessor = inputAudioContextRef.current!.createScriptProcessor(4096, 1, 1);
-          
-          scriptProcessor.onaudioprocess = (e) => {
-            const inputData = e.inputBuffer.getChannelData(0);
-            const int16 = new Int16Array(inputData.length);
-            for (let i = 0; i < inputData.length; i++) {
-              int16[i] = inputData[i] * 32768;
-            }
-            const base64Data = encode(new Uint8Array(int16.buffer));
-            sessionPromise.then(session => {
-              session.sendRealtimeInput({ media: { data: base64Data, mimeType: 'audio/pcm;rate=16000' } });
-            });
-          };
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            streamRef.current = stream;
+            
+            const source = inputAudioContextRef.current!.createMediaStreamSource(stream);
+            sourceRef.current = source;
+            
+            const scriptProcessor = inputAudioContextRef.current!.createScriptProcessor(4096, 1, 1);
+            processorRef.current = scriptProcessor;
+            
+            scriptProcessor.onaudioprocess = (e) => {
+              const inputData = e.inputBuffer.getChannelData(0);
+              // Convert to Int16 PCM for Gemini
+              const int16 = new Int16Array(inputData.length);
+              for (let i = 0; i < inputData.length; i++) {
+                int16[i] = inputData[i] * 32768;
+              }
+              const base64Data = encode(new Uint8Array(int16.buffer));
+              
+              // Only send if session is active
+              sessionPromise.then(session => {
+                session.sendRealtimeInput({ media: { data: base64Data, mimeType: 'audio/pcm;rate=16000' } });
+              });
+            };
 
-          source.connect(scriptProcessor);
-          scriptProcessor.connect(inputAudioContextRef.current!.destination);
+            source.connect(scriptProcessor);
+            scriptProcessor.connect(inputAudioContextRef.current!.destination);
+          } catch (err) {
+            console.error("Microphone access denied", err);
+            setIsConnecting(false);
+          }
         },
         onmessage: async (message: LiveServerMessage) => {
           const base64Audio = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
@@ -101,7 +140,10 @@ const LiveAnalyst: React.FC<LiveAnalystProps> = ({ onClose }) => {
             setTranscription(prev => [...prev.slice(-4), message.serverContent!.outputTranscription!.text]);
           }
         },
-        onerror: (e) => console.error("Live Error:", e),
+        onerror: (e) => {
+          console.error("Live Error:", e);
+          stopSession();
+        },
         onclose: () => stopSession(),
       },
       config: {
@@ -124,7 +166,7 @@ const LiveAnalyst: React.FC<LiveAnalystProps> = ({ onClose }) => {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-300">
       <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-[3rem] overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800">
         <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -172,8 +214,10 @@ const LiveAnalyst: React.FC<LiveAnalystProps> = ({ onClose }) => {
             <p className="text-sm text-slate-500 px-4">Discuss the day's high-impact events and your sentiment outlook in real-time.</p>
           </div>
 
-          <div className="w-full bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl h-20 overflow-hidden text-xs text-slate-400 font-medium italic text-center">
-            {transcription.length > 0 ? transcription.join(' ') : "Transcript will appear here..."}
+          <div className="w-full bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl h-24 overflow-y-auto no-scrollbar text-xs text-slate-400 font-medium italic text-center flex items-center justify-center">
+            {transcription.length > 0 ? (
+              <span className="text-slate-600 dark:text-slate-300">"{transcription[transcription.length - 1]}"</span>
+            ) : "Transcript will appear here..."}
           </div>
 
           {!isActive ? (

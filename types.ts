@@ -33,6 +33,17 @@ export interface SentimentData {
   reason: string;
 }
 
+export interface TradeSetup {
+  pair: string;
+  bias: 'BULLISH' | 'BEARISH';
+  rationale: string;
+  levels: {
+    entry: string;
+    target: string;
+    stop: string;
+  };
+}
+
 export interface NoTradeRule {
   id: string;
   keywords: string[];
@@ -44,7 +55,7 @@ export interface NoTradeRule {
 export interface AppPreferences {
   selectedPairs: string[];
   impactFilters: Impact[];
-  alwaysIncludeUSD: boolean;
+  alwaysIncludeUSD: true | boolean;
   timezone: string;
   notificationsEnabled: boolean;
   notifyMinutesBefore: number;
