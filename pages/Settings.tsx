@@ -9,6 +9,20 @@ import { Moon, Sun, Monitor, Bell, Globe, RotateCcw, ShieldCheck } from 'lucide-
 const Settings: React.FC = () => {
   const { preferences, updatePreferences, togglePair, resetApp } = useAppStore();
 
+  const handleNotificationToggle = async (checked: boolean) => {
+    if (checked) {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        updatePreferences({ notificationsEnabled: true });
+      } else {
+        alert('Notification permission was denied.');
+        updatePreferences({ notificationsEnabled: false });
+      }
+    } else {
+      updatePreferences({ notificationsEnabled: false });
+    }
+  };
+
   return (
     <AppShell title="Settings">
       <div className="space-y-8">
@@ -81,7 +95,7 @@ const Settings: React.FC = () => {
               <input 
                 type="checkbox" 
                 checked={preferences.notificationsEnabled}
-                onChange={(e) => updatePreferences({ notificationsEnabled: e.target.checked })}
+                onChange={(e) => handleNotificationToggle(e.target.checked)}
                 className="w-11 h-6 rounded-full bg-slate-200 appearance-none relative cursor-pointer checked:bg-sky-500 transition-colors after:content-[''] after:absolute after:top-1 after:left-1 after:w-4 after:h-4 after:bg-white after:rounded-full after:transition-transform checked:after:translate-x-5"
               />
             </div>

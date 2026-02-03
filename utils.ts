@@ -30,8 +30,8 @@ export const formatDuration = (seconds: number) => {
   return `${h.toString().padStart(2, '0')} : ${m.toString().padStart(2, '0')} : ${s.toString().padStart(2, '0')}`;
 };
 
-// Audio Utilities for Gemini TTS (Raw PCM)
-export function decodeBase64(base64: string) {
+// Audio Utilities for Gemini (Raw PCM)
+export function decode(base64: string) {
   const binaryString = atob(base64);
   const len = binaryString.length;
   const bytes = new Uint8Array(len);
@@ -39,6 +39,15 @@ export function decodeBase64(base64: string) {
     bytes[i] = binaryString.charCodeAt(i);
   }
   return bytes;
+}
+
+export function encode(bytes: Uint8Array) {
+  let binary = '';
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
 }
 
 export async function decodeAudioData(
@@ -59,6 +68,9 @@ export async function decodeAudioData(
   }
   return buffer;
 }
+
+// Keeping decodeBase64 for backward compatibility if needed in old components
+export const decodeBase64 = decode;
 
 export const generateMockNews = (): NewsEvent[] => {
   const today = new Date();

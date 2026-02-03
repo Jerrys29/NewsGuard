@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type, Modality } from "@google/genai";
-import { NewsEvent, Impact } from "../types";
+import { NewsEvent, Impact, SentimentData } from "../types";
 
 export const getAIAnalyst = () => new GoogleGenAI({ apiKey: process.env.API_KEY! });
 
@@ -46,6 +46,33 @@ export async function fetchLiveNewsWithSearch(): Promise<{ news: NewsEvent[], so
   }
 }
 
+export async function getMarketSentiment(news: NewsEvent[], pairs: string[]): Promise<SentimentData[]> {
+  const ai = getAIAnalyst();
+  const context = news.map(n => `${n.title} (${n.currency})`).join(", ");
+  const prompt = `Based on these upcoming economic events: ${context}, provide a market sentiment analysis for these pairs: ${pairs.join(", ")}. 
+  Return a JSON array of objects:
+  {
+    "pair": "Pair Name",
+    "bias": "BULLISH/BEARISH/NEUTRAL",
+    "score": number (0-100 strength),
+    "reason": "One sentence explanation"
+  }`;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+    },
+  });
+
+  try {
+    return JSON.parse(response.text || "[]");
+  } catch (e) {
+    return [];
+  }
+}
+
 export async function getRiskAssessment(event: NewsEvent): Promise<string> {
   const ai = getAIAnalyst();
   const prompt = `As a professional hedge fund risk manager, explain the expected market reaction and volatility pattern for the upcoming economic event: "${event.title}" (${event.currency}). 
@@ -81,11 +108,31 @@ export async function generateAudioBriefing(news: NewsEvent[]): Promise<string |
       responseModalities: [Modality.AUDIO],
       speechConfig: {
         voiceConfig: {
-          prebuiltVoiceConfig: { voiceName: 'Kore' }, // Professional male voice
+          prebuiltVoiceConfig: { voiceName: 'Kore' }, 
         },
       },
     },
   });
 
   return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+}
+
+export async function getDailyTradingPlan(news: NewsEvent[], sentiments: SentimentData[]): Promise<string> {
+  const ai = getAIAnalyst();
+  const newsContext = news.filter(n => n.impact === Impact.HIGH).map(n => n.title).join(", ");
+  const sentimentContext = sentiments.map(s => `${s.pair}: ${s.bias} (${s.score}%)`).join(", ");
+  
+  const prompt = `Generate a high-level daily trading strategy based on these news events: ${newsContext} and these sentiments: ${sentimentContext}. 
+  Format as a professional brief with sections: 
+  - OVERVIEW 
+  - KEY FOCUS 
+  - RISK GUARD 
+  Keep it very concise and actionable for a day trader. Use bold text for emphasis.`;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: prompt,
+  });
+
+  return response.text || "No plan generated.";
 }

@@ -40,13 +40,25 @@
             border: 1px solid rgba(51, 65, 85, 0.5);
         }
         .bg-mesh {
-            background: radial-gradient(at 20% 30%, #0ea5e944 0%, transparent 50%),
-                        radial-gradient(at 80% 70%, #0284c744 0%, transparent 50%),
+            background: radial-gradient(at 20% 30%, #0ea5e922 0%, transparent 50%),
+                        radial-gradient(at 80% 70%, #6366f122 0%, transparent 50%),
+                        radial-gradient(at 50% 50%, #10b98111 0%, transparent 50%);
+        }
+        .dark .bg-mesh {
+            background: radial-gradient(at 20% 30%, #0ea5e922 0%, transparent 50%),
+                        radial-gradient(at 80% 70%, #6366f122 0%, transparent 50%),
                         #020617;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50 transition-colors duration-300">
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50 transition-colors duration-300 bg-mesh">
     <div id="root"></div>
 </body>
 </html>

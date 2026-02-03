@@ -1,13 +1,14 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { AppPreferences, Impact, NewsEvent } from './types';
+import { AppPreferences, Impact, NewsEvent, SentimentData } from './types';
 import { NO_TRADE_RULES } from './constants';
 
 interface AppState {
   isOnboarded: boolean;
   preferences: AppPreferences;
   news: NewsEvent[];
+  sentiments: SentimentData[];
   groundingSources: any[];
   lastSync: number | null;
   isSyncing: boolean;
@@ -16,6 +17,7 @@ interface AppState {
   completeOnboarding: () => void;
   updatePreferences: (prefs: Partial<AppPreferences>) => void;
   setNews: (news: NewsEvent[], sources?: any[]) => void;
+  setSentiments: (sentiments: SentimentData[]) => void;
   setIsSyncing: (isSyncing: boolean) => void;
   togglePair: (pairId: string) => void;
   toggleImpact: (impact: Impact) => void;
@@ -39,6 +41,7 @@ export const useAppStore = create<AppState>()(
       isOnboarded: false,
       preferences: DEFAULT_PREFS,
       news: [],
+      sentiments: [],
       groundingSources: [],
       lastSync: null,
       isSyncing: false,
@@ -55,6 +58,8 @@ export const useAppStore = create<AppState>()(
         lastSync: Date.now(),
         isSyncing: false 
       }),
+
+      setSentiments: (sentiments) => set({ sentiments }),
 
       setIsSyncing: (isSyncing) => set({ isSyncing }),
 
@@ -76,6 +81,7 @@ export const useAppStore = create<AppState>()(
         isOnboarded: false, 
         preferences: DEFAULT_PREFS, 
         news: [],
+        sentiments: [],
         groundingSources: [],
         lastSync: null
       }),

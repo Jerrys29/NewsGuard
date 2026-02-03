@@ -1,9 +1,10 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Newspaper, Settings, ShieldAlert, Bell, Activity } from 'lucide-react';
 import { useAppStore } from '../../store';
 import { Impact } from '../../types';
+import { NO_TRADE_RULES } from '../../constants';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -12,7 +13,16 @@ interface AppShellProps {
 
 const AppShell: React.FC<AppShellProps> = ({ children, title = "News Guard" }) => {
   const { news, preferences } = useAppStore();
-  const isNoTradeDay = news.some(n => n.isNoTrade && preferences.impactFilters.includes(Impact.HIGH));
+
+  const isNoTradeDay = useMemo(() => news.some(n => {
+    const isHighImpact = n.impact === Impact.HIGH;
+    const matchesKeyword = NO_TRADE_RULES.some(rule => 
+      preferences.noTradeRules.includes(rule.id) && 
+      rule.keywords.some(kw => n.title.toLowerCase().includes(kw.toLowerCase()))
+    );
+    // Respect AI-detected flag or keyword match for high impact events
+    return isHighImpact && (matchesKeyword || n.isNoTrade);
+  }), [news, preferences.noTradeRules]);
 
   return (
     <div className="flex flex-col min-h-screen pb-20">

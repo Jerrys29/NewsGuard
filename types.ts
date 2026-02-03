@@ -26,6 +26,13 @@ export interface NewsEvent {
   isNoTrade?: boolean;
 }
 
+export interface SentimentData {
+  pair: string;
+  bias: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  score: number; // 0 to 100
+  reason: string;
+}
+
 export interface NoTradeRule {
   id: string;
   keywords: string[];
