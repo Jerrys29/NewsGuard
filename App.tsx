@@ -1,6 +1,5 @@
 
-import React, { useEffect, useCallback } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect, useCallback, useState } from 'react';
 import { useAppStore } from './store';
 import Onboarding from './pages/Onboarding';
 import Dashboard from './pages/Dashboard';
@@ -10,24 +9,37 @@ import { generateMockNews, getNextNews } from './utils';
 import { fetchLiveNewsWithSearch, getMarketSentiment, getPairRiskScores, getTradeOfTheDay } from './services/ai';
 import { differenceInSeconds } from 'date-fns';
 
+type View = 'onboarding' | 'dashboard' | 'notrade' | 'settings';
+
 const App: React.FC = () => {
-  const { 
-    isOnboarded, 
-    preferences, 
-    setNews, 
-    setSentiments, 
-    setRiskScores, 
+  const {
+    isOnboarded,
+    preferences,
+    setNews,
+    setSentiments,
+    setRiskScores,
     setTradeOfTheDay,
-    lastSync, 
+    lastSync,
     setIsSyncing,
     news,
     updatePreferences
   } = useAppStore();
 
+  const [currentView, setCurrentView] = useState<View>(isOnboarded ? 'dashboard' : 'onboarding');
+
+  // Handle Initial view when onboarding status changes
+  useEffect(() => {
+    if (!isOnboarded) {
+      setCurrentView('onboarding');
+    } else if (currentView === 'onboarding') {
+      setCurrentView('dashboard');
+    }
+  }, [isOnboarded, currentView]);
+
   const syncAll = useCallback(async (force = false) => {
     const STALE_THRESHOLD = 4 * 60 * 60 * 1000;
     const now = Date.now();
-    
+
     if (!force && lastSync && (now - lastSync < STALE_THRESHOLD)) {
       return;
     }
@@ -36,14 +48,14 @@ const App: React.FC = () => {
     try {
       const newsResult = await fetchLiveNewsWithSearch();
       setNews(newsResult.news, newsResult.sources);
-      
+
       const pairs = preferences.selectedPairs;
       const [sentimentResult, scoresResult, tradeResult] = await Promise.all([
         getMarketSentiment(newsResult.news, pairs),
         getPairRiskScores(newsResult.news, pairs),
         getTradeOfTheDay(newsResult.news, []) // Simplified context for trade of the day
       ]);
-      
+
       setSentiments(sentimentResult);
       setRiskScores(scoresResult);
       setTradeOfTheDay(tradeResult);
@@ -122,28 +134,25 @@ const App: React.FC = () => {
     return () => clearInterval(interval);
   }, [news, preferences.notificationsEnabled, preferences.notifyMinutesBefore, updatePreferences]);
 
+  const renderView = () => {
+    switch (currentView) {
+      case 'onboarding':
+        return <Onboarding />;
+      case 'dashboard':
+        return <Dashboard />;
+      case 'notrade':
+        return <NoTradeConfigPage />;
+      case 'settings':
+        return <Settings />;
+      default:
+        return <Dashboard />;
+    }
+  };
+
   return (
-    <Router>
-      <Routes>
-        <Route 
-          path="/onboarding" 
-          element={!isOnboarded ? <Onboarding /> : <Navigate to="/" replace />} 
-        />
-        <Route 
-          path="/" 
-          element={isOnboarded ? <Dashboard /> : <Navigate to="/onboarding" replace />} 
-        />
-        <Route 
-          path="/notrade" 
-          element={isOnboarded ? <NoTradeConfigPage /> : <Navigate to="/onboarding" replace />} 
-        />
-        <Route 
-          path="/settings" 
-          element={isOnboarded ? <Settings /> : <Navigate to="/onboarding" replace />} 
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Router>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 overflow-x-hidden">
+      {renderView()}
+    </div>
   );
 };
 

@@ -19,7 +19,7 @@ const Dashboard: React.FC = () => {
   const [assessment, setAssessment] = useState<string | null>(null);
   const [loadingAssessment, setLoadingAssessment] = useState(false);
   const [isLiveModalOpen, setIsLiveModalOpen] = useState(false);
-  
+
   const [isBriefingLoading, setIsBriefingLoading] = useState(false);
   const [isPlayingBriefing, setIsPlayingBriefing] = useState(false);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -47,14 +47,14 @@ const Dashboard: React.FC = () => {
     try {
       const result = await fetchLiveNewsWithSearch();
       setNews(result.news, result.sources);
-      
+
       const pairs = preferences.selectedPairs;
       const [sentimentResult, scores, tradeResult] = await Promise.all([
         getMarketSentiment(result.news, pairs),
         getPairRiskScores(result.news, pairs),
         getTradeOfTheDay(result.news, [])
       ]);
-      
+
       setSentiments(sentimentResult);
       setRiskScores(scores);
       setTradeOfTheDay(tradeResult);
@@ -120,8 +120,8 @@ const Dashboard: React.FC = () => {
 
   const isNoTradeDay = useMemo(() => news.some(n => {
     const isHighImpact = n.impact === Impact.HIGH;
-    const matchesKeyword = NO_TRADE_RULES.some(rule => 
-      preferences.noTradeRules.includes(rule.id) && 
+    const matchesKeyword = NO_TRADE_RULES.some(rule =>
+      preferences.noTradeRules.includes(rule.id) &&
       rule.keywords.some(kw => n.title.toLowerCase().includes(kw.toLowerCase()))
     );
     return isHighImpact && (matchesKeyword || n.isNoTrade);
@@ -156,9 +156,9 @@ const Dashboard: React.FC = () => {
         {/* Top Status Bar */}
         <div className="flex items-center gap-2 px-1">
           <div className="flex-1 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-            <div 
-              className={`h-full transition-all duration-1000 ${isNoTradeDay ? 'bg-red-500' : 'bg-emerald-500'}`} 
-              style={{ width: isSyncing ? '40%' : '100%' }} 
+            <div
+              className={`h-full transition-all duration-1000 ${isNoTradeDay ? 'bg-red-500' : 'bg-emerald-500'}`}
+              style={{ width: isSyncing ? '40%' : '100%' }}
             />
           </div>
           <span className={`text-[10px] font-black uppercase tracking-widest ${isNoTradeDay ? 'text-red-500' : 'text-emerald-500'} whitespace-nowrap`}>
@@ -170,7 +170,7 @@ const Dashboard: React.FC = () => {
         {tradeOfTheDay && (
           <div className="bg-gradient-to-br from-amber-500/10 to-orange-500/10 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-500/30 rounded-[2.5rem] p-6 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-6 opacity-[0.05] group-hover:scale-125 transition-transform duration-1000">
-               <Sparkles size={120} />
+              <Sparkles size={120} />
             </div>
             <div className="flex justify-between items-start mb-4">
               <div>
@@ -188,4 +188,19 @@ const Dashboard: React.FC = () => {
                 <span className="text-sm font-black">{tradeOfTheDay.levels.entry}</span>
               </div>
               <div className="bg-white dark:bg-slate-900/50 p-3 rounded-2xl border border-slate-200 dark:border-slate-800">
-                <
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Target</span>
+                <span className="text-sm font-black text-emerald-500">{tradeOfTheDay.levels.target}</span>
+              </div>
+              <div className="bg-white dark:bg-slate-900/50 p-3 rounded-2xl border border-slate-200 dark:border-slate-800">
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Stop</span>
+                <span className="text-sm font-black text-red-500">{tradeOfTheDay.levels.stop}</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </AppShell>
+  );
+};
+
+export default Dashboard;

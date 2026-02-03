@@ -1,8 +1,7 @@
 
 import React, { useMemo } from 'react';
-import { NavLink } from 'react-router-dom';
 import { Newspaper, Settings, ShieldAlert, Bell, Activity } from 'lucide-react';
-import { useAppStore } from '../../store';
+import { useAppStore, View } from '../../store';
 import { Impact } from '../../types';
 import { NO_TRADE_RULES } from '../../constants';
 
@@ -12,17 +11,31 @@ interface AppShellProps {
 }
 
 const AppShell: React.FC<AppShellProps> = ({ children, title = "News Guard" }) => {
-  const { news, preferences } = useAppStore();
+  const { news, preferences, currentView, setCurrentView } = useAppStore();
 
   const isNoTradeDay = useMemo(() => news.some(n => {
     const isHighImpact = n.impact === Impact.HIGH;
-    const matchesKeyword = NO_TRADE_RULES.some(rule => 
-      preferences.noTradeRules.includes(rule.id) && 
+    const matchesKeyword = NO_TRADE_RULES.some(rule =>
+      preferences.noTradeRules.includes(rule.id) &&
       rule.keywords.some(kw => n.title.toLowerCase().includes(kw.toLowerCase()))
     );
     // Respect AI-detected flag or keyword match for high impact events
     return isHighImpact && (matchesKeyword || n.isNoTrade);
   }), [news, preferences.noTradeRules]);
+
+  const NavItem = ({ view, icon: Icon, label, alert = false }: { view: View, icon: any, label: string, alert?: boolean }) => {
+    const isActive = currentView === view;
+    return (
+      <button
+        onClick={() => setCurrentView(view)}
+        className={`flex flex-col items-center gap-1 transition-colors relative ${isActive ? 'text-sky-500' : 'text-slate-400'}`}
+      >
+        <Icon size={24} />
+        <span className="text-[10px] font-bold uppercase tracking-tight">{label}</span>
+        {alert && <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full" />}
+      </button>
+    );
+  };
 
   return (
     <div className="flex flex-col min-h-screen pb-20">
@@ -47,28 +60,9 @@ const AppShell: React.FC<AppShellProps> = ({ children, title = "News Guard" }) =
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 glass border-t border-slate-200 dark:border-slate-800 px-6 py-3 flex justify-around items-center z-50">
-        <NavLink 
-          to="/" 
-          className={({ isActive }) => `flex flex-col items-center gap-1 transition-colors ${isActive ? 'text-sky-500' : 'text-slate-400'}`}
-        >
-          <Activity size={24} />
-          <span className="text-[10px] font-bold uppercase tracking-tight">Timeline</span>
-        </NavLink>
-        <NavLink 
-          to="/notrade" 
-          className={({ isActive }) => `flex flex-col items-center gap-1 transition-colors relative ${isActive ? 'text-sky-500' : 'text-slate-400'}`}
-        >
-          <ShieldAlert size={24} />
-          <span className="text-[10px] font-bold uppercase tracking-tight">Rules</span>
-          {isNoTradeDay && <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full" />}
-        </NavLink>
-        <NavLink 
-          to="/settings" 
-          className={({ isActive }) => `flex flex-col items-center gap-1 transition-colors ${isActive ? 'text-sky-500' : 'text-slate-400'}`}
-        >
-          <Settings size={24} />
-          <span className="text-[10px] font-bold uppercase tracking-tight">Config</span>
-        </NavLink>
+        <NavItem view="dashboard" icon={Activity} label="Timeline" />
+        <NavItem view="notrade" icon={ShieldAlert} label="Rules" alert={isNoTradeDay} />
+        <NavItem view="settings" icon={Settings} label="Config" />
       </nav>
     </div>
   );
