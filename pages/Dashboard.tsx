@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import AppShell from '../components/layout/AppShell';
 import LiveAnalyst from '../components/LiveAnalyst';
 import { useAppStore } from '../store';
@@ -8,15 +8,15 @@ import { formatLocalTime, getImpactColor, getNextNews, decodeBase64, decodeAudio
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { CURRENCY_FLAGS, NO_TRADE_RULES } from '../constants';
-import { Activity, Sparkles, Target, BrainCircuit, Flame, Mic, Volume2, Square, Loader2, RefreshCw, ChevronRight, ExternalLink, X } from 'lucide-react';
-import { differenceInSeconds, isPast, getHours } from 'date-fns';
+import { Activity, Sparkles, Target, BrainCircuit, Flame, Mic, Volume2, Square, Loader2, RefreshCw, ChevronRight, ExternalLink, X, Calendar } from 'lucide-react';
+import { differenceInSeconds, isPast, isToday } from 'date-fns';
 import { fetchLiveNewsWithSearch, getRiskAssessment, generateAudioBriefing, getMarketSentiment, getDailyTradingPlan, getPairRiskScores, getTradeOfTheDay } from '../services/ai';
 
 const Dashboard: React.FC = () => {
   const { 
     news, sentiments, setSentiments, preferences, setNews, 
     isSyncing, setIsSyncing, groundingSources, setRiskScores, 
-    riskScores, tradeOfTheDay, setTradeOfTheDay 
+    riskScores, tradeOfTheDay, setTradeOfTheDay, selectedDate, setSelectedDate 
   } = useAppStore();
 
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
@@ -46,11 +46,12 @@ const Dashboard: React.FC = () => {
     return () => clearInterval(timer);
   }, [nextNews]);
 
-  const handleSync = async () => {
+  const handleSync = useCallback(async () => {
     if (isSyncing) return;
     setIsSyncing(true);
     try {
-      const result = await fetchLiveNewsWithSearch();
+      // Pass the selected date to the AI service
+      const result = await fetchLiveNewsWithSearch(selectedDate);
       setNews(result.news, result.sources);
       
       const pairs = preferences.selectedPairs;
@@ -68,7 +69,12 @@ const Dashboard: React.FC = () => {
     } finally {
       setIsSyncing(false);
     }
-  };
+  }, [isSyncing, selectedDate, preferences.selectedPairs, setIsSyncing, setNews, setSentiments, setRiskScores, setTradeOfTheDay]);
+
+  // Trigger sync when date changes
+  useEffect(() => {
+    handleSync();
+  }, [selectedDate]);
 
   const handleAudioBriefing = async () => {
     if (isPlayingBriefing) {
@@ -146,6 +152,26 @@ const Dashboard: React.FC = () => {
   return (
     <AppShell title="Terminal">
       <div className="space-y-6 pb-10">
+        
+        {/* Date Selection Header */}
+        <div className="flex justify-between items-center bg-white dark:bg-slate-900 p-2 rounded-2xl border border-slate-200 dark:border-slate-800">
+           <div className="flex items-center gap-3 px-2">
+              <Calendar size={18} className="text-sky-500" />
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{t('select_date', preferences.language)}</span>
+                <input 
+                  type="date" 
+                  value={selectedDate} 
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="bg-transparent font-bold text-sm outline-none text-slate-900 dark:text-slate-200"
+                />
+              </div>
+           </div>
+           <Button variant="ghost" size="sm" onClick={handleSync} disabled={isSyncing} className="h-10 w-10 p-0 rounded-xl">
+              <RefreshCw size={16} className={isSyncing ? "animate-spin text-sky-500" : "text-slate-400"} />
+           </Button>
+        </div>
+
         {/* Status Bar */}
         <div className="flex items-center gap-3 px-1">
           <div className="flex-1 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
@@ -159,8 +185,8 @@ const Dashboard: React.FC = () => {
           </span>
         </div>
 
-        {/* Trade of the Day (Neural Pick) */}
-        {tradeOfTheDay && (
+        {/* Trade of the Day (Only show if date is today) */}
+        {tradeOfTheDay && isToday(new Date(selectedDate)) && (
           <div className="bg-gradient-to-br from-amber-400/20 via-orange-500/10 to-transparent border border-amber-500/30 rounded-[2.5rem] p-8 relative overflow-hidden group shadow-xl">
             <div className="absolute top-0 right-0 p-6 opacity-[0.05] group-hover:scale-110 transition-transform duration-1000">
               <Sparkles size={140} />
@@ -284,9 +310,9 @@ const Dashboard: React.FC = () => {
               <span className="ml-2 text-[10px] font-black uppercase tracking-widest">{t('brief', preferences.language)}</span>
             </Button>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleSync} disabled={isSyncing} className="h-11 px-4 text-slate-500">
-            <RefreshCw size={14} className={isSyncing ? "animate-spin" : ""} />
-          </Button>
+          <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+             {selectedDate}
+          </div>
         </div>
 
         {/* Event List */}
@@ -303,9 +329,9 @@ const Dashboard: React.FC = () => {
               <div 
                 key={n.id} 
                 onClick={() => openAssessment(n)}
-                className={`p-5 rounded-[2rem] border transition-all flex justify-between items-center group cursor-pointer ${
+                className={`p-5 rounded-[2rem] border transition-all flex flex-col gap-4 group cursor-pointer ${
                   isPast(new Date(n.time)) 
-                  ? 'bg-slate-50 dark:bg-slate-900/30 border-slate-100 dark:border-slate-800 opacity-30 grayscale' 
+                  ? 'bg-slate-50 dark:bg-slate-900/30 border-slate-100 dark:border-slate-800 opacity-60 grayscale-[0.5]' 
                   : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-sky-500/50 shadow-sm'
                 }`}
               >
@@ -314,21 +340,32 @@ const Dashboard: React.FC = () => {
                     <span className="text-[9px] opacity-60 tracking-tighter">{n.currency}</span>
                     <span className="text-base tracking-tighter">{formatLocalTime(new Date(n.time), preferences.timezone)}</span>
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      {/* Use AI provided flag, or fallback to currency map */}
                       <span className="text-2xl leading-none filter drop-shadow-md">
                         {n.flag || CURRENCY_FLAGS[n.currency]}
                       </span>
                       <h4 className="font-black text-sm text-slate-900 dark:text-slate-100 group-hover:text-sky-500 line-clamp-1">{n.title}</h4>
                     </div>
-                    <div className="flex gap-3 text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                      <span>{t('fcst', preferences.language)}: {n.forecast || '-'}</span>
-                      <span>{t('prev', preferences.language)}: {n.previous || '-'}</span>
-                    </div>
                   </div>
+                  {!isPast(new Date(n.time)) && <ChevronRight size={18} className="text-slate-300 group-hover:text-sky-500 transition-colors" />}
                 </div>
-                {!isPast(new Date(n.time)) && <ChevronRight size={18} className="text-slate-300 group-hover:text-sky-500 transition-colors" />}
+
+                {/* Data Grid for Actual / Forecast / Previous */}
+                <div className="grid grid-cols-3 gap-2 border-t border-slate-100 dark:border-slate-800/50 pt-3">
+                    <div className="flex flex-col items-center bg-slate-50 dark:bg-slate-800/50 rounded-lg py-2">
+                        <span className="text-[8px] font-black uppercase text-slate-400 tracking-wider mb-1">{t('prev', preferences.language)}</span>
+                        <span className="text-xs font-bold font-mono text-slate-600 dark:text-slate-300">{n.previous || '-'}</span>
+                    </div>
+                    <div className="flex flex-col items-center bg-slate-50 dark:bg-slate-800/50 rounded-lg py-2">
+                        <span className="text-[8px] font-black uppercase text-sky-500 tracking-wider mb-1">{t('fcst', preferences.language)}</span>
+                        <span className="text-xs font-bold font-mono text-slate-900 dark:text-white">{n.forecast || '-'}</span>
+                    </div>
+                    <div className={`flex flex-col items-center rounded-lg py-2 ${n.actual && n.actual !== '-' ? 'bg-emerald-500/10' : 'bg-slate-50 dark:bg-slate-800/50'}`}>
+                        <span className={`text-[8px] font-black uppercase tracking-wider mb-1 ${n.actual && n.actual !== '-' ? 'text-emerald-500' : 'text-slate-400'}`}>{t('actual', preferences.language)}</span>
+                        <span className={`text-xs font-bold font-mono ${n.actual && n.actual !== '-' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300'}`}>{n.actual || '-'}</span>
+                    </div>
+                </div>
               </div>
             ))}
           </div>

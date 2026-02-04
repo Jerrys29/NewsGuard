@@ -22,22 +22,21 @@ const getRiskInstruction = () => {
   return `Trader Risk Profile: ${riskTolerance.toUpperCase()}.`;
 };
 
-export async function fetchLiveNewsWithSearch(): Promise<{ news: NewsEvent[], sources: any[] }> {
+export async function fetchLiveNewsWithSearch(targetDate?: string): Promise<{ news: NewsEvent[], sources: any[] }> {
   const ai = getAIAnalyst();
-  const today = new Date().toISOString().split('T')[0];
+  const dateStr = targetDate || new Date().toISOString().split('T')[0];
   
-  // News titles are always kept in English for standard matching, but we could translate them if needed. 
-  // For now, we search in English to get better global results, but the analysis steps will use the preferred language.
-  const prompt = `Search for high-impact economic news events for today (${today}) and tomorrow. 
+  const prompt = `Search for economic news events specifically for date: ${dateStr}.
   Focus on USD, EUR, GBP, and JPY. Return the data as a JSON array of objects with the following structure:
   {
     "title": "Exact name of the event",
     "currency": "USD/EUR/etc",
     "flag": "Specific Country Emoji (e.g. 🇺🇸, 🇩🇪, 🇫🇷, 🇮🇹, 🇬🇧, 🇯🇵)",
     "impact": "HIGH/MEDIUM/LOW",
-    "time": "ISO 8601 timestamp",
-    "forecast": "Expected value",
-    "previous": "Previous value",
+    "time": "ISO 8601 timestamp (ensure the date matches ${dateStr})",
+    "forecast": "Consensus/Forecast value (e.g. 2.5%) or '-' if unavailable",
+    "previous": "Previous release value (e.g. 2.4%) or '-' if unavailable",
+    "actual": "Actual released value (e.g. 2.6%) or '-' if not yet released/future event",
     "isNoTrade": boolean (true if it's NFP, FOMC, CPI, or Rate Decision)
   }. IMPORTANT: Only return the JSON array, no extra text.`;
 
@@ -56,7 +55,7 @@ export async function fetchLiveNewsWithSearch(): Promise<{ news: NewsEvent[], so
     return {
       news: news.map((n: any, i: number) => ({
         ...n,
-        id: `ai-news-${i}`,
+        id: `ai-news-${i}-${Date.now()}`,
         time: new Date(n.time)
       })),
       sources: response.candidates?.[0]?.groundingMetadata?.groundingChunks || []

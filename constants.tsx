@@ -96,8 +96,10 @@ export const TRANSLATIONS = {
     stop_loss: "Stop Loss",
     acknowledge: "Acknowledge Directive",
     running_models: "Running Institutional Models...",
-    fcst: "FCST",
-    prev: "PREV"
+    fcst: "Consensus",
+    prev: "Previous",
+    actual: "Actual",
+    select_date: "Select Date"
   },
   fr: {
     timeline: "Actualités",
@@ -146,8 +148,10 @@ export const TRANSLATIONS = {
     stop_loss: "Stop Loss",
     acknowledge: "Compris",
     running_models: "Exécution des Modèles...",
-    fcst: "PRÉV",
-    prev: "PRÉC"
+    fcst: "Consensus",
+    prev: "Précédent",
+    actual: "Actuel",
+    select_date: "Sélectionner Date"
   },
   es: {
     timeline: "Cronología",
@@ -196,8 +200,10 @@ export const TRANSLATIONS = {
     stop_loss: "Stop Loss",
     acknowledge: "Entendido",
     running_models: "Ejecutando Modelos...",
-    fcst: "PREV",
-    prev: "ANT"
+    fcst: "Consenso",
+    prev: "Anterior",
+    actual: "Actual",
+    select_date: "Seleccionar Fecha"
   },
   de: {
     timeline: "Zeitlinie",
@@ -246,8 +252,10 @@ export const TRANSLATIONS = {
     stop_loss: "Stop Loss",
     acknowledge: "Verstanden",
     running_models: "Führe Modelle aus...",
-    fcst: "PROG",
-    prev: "VORH"
+    fcst: "Prognose",
+    prev: "Vorherig",
+    actual: "Aktuell",
+    select_date: "Datum Wählen"
   },
   jp: {
     timeline: "タイムライン",
@@ -297,6 +305,8 @@ export const TRANSLATIONS = {
     acknowledge: "了解",
     running_models: "モデル実行中...",
     fcst: "予想",
-    prev: "前回"
+    prev: "前回",
+    actual: "結果",
+    select_date: "日付選択"
   }
 };

@@ -14,6 +14,7 @@ interface AppState {
   groundingSources: any[];
   lastSync: number | null;
   isSyncing: boolean;
+  selectedDate: string; // ISO Date string YYYY-MM-DD
   
   // Actions
   completeOnboarding: () => void;
@@ -23,6 +24,7 @@ interface AppState {
   setRiskScores: (scores: Record<string, number>) => void;
   setTradeOfTheDay: (trade: TradeSetup | null) => void;
   setIsSyncing: (isSyncing: boolean) => void;
+  setSelectedDate: (date: string) => void;
   togglePair: (pairId: string) => void;
   toggleImpact: (impact: Impact) => void;
   resetApp: () => void;
@@ -53,6 +55,7 @@ export const useAppStore = create<AppState>()(
       groundingSources: [],
       lastSync: null,
       isSyncing: false,
+      selectedDate: new Date().toISOString().split('T')[0],
 
       completeOnboarding: () => set({ isOnboarded: true }),
       
@@ -72,6 +75,7 @@ export const useAppStore = create<AppState>()(
       setTradeOfTheDay: (tradeOfTheDay) => set({ tradeOfTheDay }),
 
       setIsSyncing: (isSyncing) => set({ isSyncing }),
+      setSelectedDate: (date) => set({ selectedDate: date }),
 
       togglePair: (pairId) => set((state) => {
         const selected = state.preferences.selectedPairs.includes(pairId)
@@ -95,7 +99,8 @@ export const useAppStore = create<AppState>()(
         riskScores: {},
         tradeOfTheDay: null,
         groundingSources: [],
-        lastSync: null
+        lastSync: null,
+        selectedDate: new Date().toISOString().split('T')[0]
       }),
     }),
     {
