@@ -5,6 +5,7 @@ import { useAppStore } from '../store';
 import { NO_TRADE_RULES } from '../constants';
 import { Badge } from '../components/ui/Badge';
 import { AlertTriangle, Info } from 'lucide-react';
+import { t } from '../utils';
 
 const NoTradeConfigPage: React.FC = () => {
   const { preferences, updatePreferences } = useAppStore();
@@ -22,15 +23,15 @@ const NoTradeConfigPage: React.FC = () => {
         <div className="p-5 rounded-2xl bg-sky-500 text-white space-y-2">
           <div className="flex items-center gap-2">
             <Info size={20} />
-            <h2 className="font-bold">What is No-Trade?</h2>
+            <h2 className="font-bold">{t('what_is_notrade', preferences.language)}</h2>
           </div>
           <p className="text-sm opacity-90 leading-relaxed">
-            Major news like NFP or FOMC create extreme volatility. "No-Trade" alerts remind you to stay flat during these times to protect your capital.
+            {t('notrade_desc', preferences.language)}
           </p>
         </div>
 
         <div className="space-y-4">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 px-1">Active Rules</h3>
+          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 px-1">{t('active_rules', preferences.language)}</h3>
           <div className="space-y-3">
             {NO_TRADE_RULES.map(rule => (
               <button

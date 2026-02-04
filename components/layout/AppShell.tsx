@@ -5,6 +5,7 @@ import { Newspaper, Settings, ShieldAlert, Bell, Activity } from 'lucide-react';
 import { useAppStore } from '../../store';
 import { Impact } from '../../types';
 import { NO_TRADE_RULES } from '../../constants';
+import { t } from '../../utils';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -52,14 +53,14 @@ const AppShell: React.FC<AppShellProps> = ({ children, title = "News Guard" }) =
           className={({ isActive }) => `flex flex-col items-center gap-1 transition-colors ${isActive ? 'text-sky-500' : 'text-slate-400'}`}
         >
           <Activity size={24} />
-          <span className="text-[10px] font-bold uppercase tracking-tight">Timeline</span>
+          <span className="text-[10px] font-bold uppercase tracking-tight">{t('timeline', preferences.language)}</span>
         </NavLink>
         <NavLink 
           to="/notrade" 
           className={({ isActive }) => `flex flex-col items-center gap-1 transition-colors relative ${isActive ? 'text-sky-500' : 'text-slate-400'}`}
         >
           <ShieldAlert size={24} />
-          <span className="text-[10px] font-bold uppercase tracking-tight">Rules</span>
+          <span className="text-[10px] font-bold uppercase tracking-tight">{t('rules', preferences.language)}</span>
           {isNoTradeDay && <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full" />}
         </NavLink>
         <NavLink 
@@ -67,7 +68,7 @@ const AppShell: React.FC<AppShellProps> = ({ children, title = "News Guard" }) =
           className={({ isActive }) => `flex flex-col items-center gap-1 transition-colors ${isActive ? 'text-sky-500' : 'text-slate-400'}`}
         >
           <Settings size={24} />
-          <span className="text-[10px] font-bold uppercase tracking-tight">Config</span>
+          <span className="text-[10px] font-bold uppercase tracking-tight">{t('config', preferences.language)}</span>
         </NavLink>
       </nav>
     </div>

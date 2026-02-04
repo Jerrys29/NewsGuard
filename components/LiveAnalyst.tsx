@@ -11,7 +11,7 @@ interface LiveAnalystProps {
 }
 
 const LiveAnalyst: React.FC<LiveAnalystProps> = ({ onClose }) => {
-  const { news, sentiments } = useAppStore();
+  const { news, sentiments, preferences } = useAppStore();
   const [isActive, setIsActive] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [transcription, setTranscription] = useState<string[]>([]);
@@ -75,6 +75,15 @@ const LiveAnalyst: React.FC<LiveAnalystProps> = ({ onClose }) => {
 
     const contextSummary = news.map(n => `${n.title} (${n.currency})`).join(", ");
     const sentimentSummary = sentiments.map(s => `${s.pair}: ${s.bias}`).join(", ");
+    
+    const langMap: Record<string, string> = {
+      'en': 'English',
+      'fr': 'French',
+      'es': 'Spanish',
+      'de': 'German',
+      'jp': 'Japanese'
+    };
+    const langName = langMap[preferences.language] || 'English';
 
     const sessionPromise = ai.live.connect({
       model: 'gemini-2.5-flash-native-audio-preview-12-2025',
@@ -151,7 +160,10 @@ const LiveAnalyst: React.FC<LiveAnalystProps> = ({ onClose }) => {
         systemInstruction: `You are the News Guard AI Analyst. 
         Current Context: ${contextSummary}. 
         Sentiments: ${sentimentSummary}.
+        Risk Profile: ${preferences.riskTolerance}.
+        Language: ${langName}.
         Your goal is to provide traders with verbal analysis of the day's macro risks. 
+        Speak in ${langName}.
         Be concise, professional, and focus on volatility and 'No-Trade' warnings. 
         Never provide direct financial advice, only volatility risk analysis.`,
         outputAudioTranscription: {},

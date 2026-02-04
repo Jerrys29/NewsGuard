@@ -18,6 +18,7 @@ export interface NewsEvent {
   id: string;
   title: string;
   currency: Currency;
+  flag?: string; // New field for specific country emoji
   impact: Impact;
   time: Date;
   forecast?: string;
@@ -52,13 +53,18 @@ export interface NoTradeRule {
   enabled: boolean;
 }
 
+export type Language = 'en' | 'fr' | 'es' | 'de' | 'jp';
+export type RiskTolerance = 'low' | 'medium' | 'high';
+
 export interface AppPreferences {
   selectedPairs: string[];
   impactFilters: Impact[];
-  alwaysIncludeUSD: true | boolean;
+  alwaysIncludeUSD: boolean;
   timezone: string;
   notificationsEnabled: boolean;
   notifyMinutesBefore: number;
   theme: 'light' | 'dark' | 'system';
   noTradeRules: string[];
+  language: Language;
+  riskTolerance: RiskTolerance;
 }

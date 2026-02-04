@@ -1,7 +1,13 @@
 
 import { format, isAfter, differenceInSeconds } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
-import { NewsEvent, Impact } from './types';
+import { NewsEvent, Impact, Language } from './types';
+import { TRANSLATIONS } from './constants';
+
+// Translation Helper
+export const t = (key: keyof typeof TRANSLATIONS['en'], lang: Language): string => {
+  return TRANSLATIONS[lang]?.[key] || TRANSLATIONS['en'][key] || key;
+};
 
 export const formatLocalTime = (date: Date, timezone: string) => {
   return formatInTimeZone(date, timezone, 'HH:mm');
@@ -69,7 +75,6 @@ export async function decodeAudioData(
   return buffer;
 }
 
-// Keeping decodeBase64 for backward compatibility if needed in old components
 export const decodeBase64 = decode;
 
 export const generateMockNews = (): NewsEvent[] => {
@@ -77,12 +82,12 @@ export const generateMockNews = (): NewsEvent[] => {
   today.setHours(0, 0, 0, 0);
 
   const times = [
-    { h: 9, m: 0, title: 'German Manufacturing PMI', currency: 'EUR', impact: Impact.MEDIUM },
-    { h: 10, m: 30, title: 'GBP Services PMI', currency: 'GBP', impact: Impact.MEDIUM },
-    { h: 14, m: 30, title: 'US Core CPI m/m', currency: 'USD', impact: Impact.HIGH, isNoTrade: true },
-    { h: 14, m: 30, title: 'US CPI y/y', currency: 'USD', impact: Impact.HIGH, isNoTrade: true },
-    { h: 16, m: 0, title: 'FOMC Member Speaks', currency: 'USD', impact: Impact.LOW },
-    { h: 20, m: 0, title: 'Oil Inventories', currency: 'USD', impact: Impact.MEDIUM },
+    { h: 9, m: 0, title: 'German Manufacturing PMI', currency: 'EUR', flag: '🇩🇪', impact: Impact.MEDIUM },
+    { h: 10, m: 30, title: 'GBP Services PMI', currency: 'GBP', flag: '🇬🇧', impact: Impact.MEDIUM },
+    { h: 14, m: 30, title: 'US Core CPI m/m', currency: 'USD', flag: '🇺🇸', impact: Impact.HIGH, isNoTrade: true },
+    { h: 14, m: 30, title: 'US CPI y/y', currency: 'USD', flag: '🇺🇸', impact: Impact.HIGH, isNoTrade: true },
+    { h: 16, m: 0, title: 'FOMC Member Speaks', currency: 'USD', flag: '🇺🇸', impact: Impact.LOW },
+    { h: 20, m: 0, title: 'Oil Inventories', currency: 'USD', flag: '🇺🇸', impact: Impact.MEDIUM },
   ];
 
   return times.map((t, i) => {
@@ -92,6 +97,7 @@ export const generateMockNews = (): NewsEvent[] => {
       id: `news-${i}`,
       title: t.title,
       currency: t.currency as any,
+      flag: t.flag,
       impact: t.impact,
       time,
       forecast: (Math.random() * 5).toFixed(1) + '%',

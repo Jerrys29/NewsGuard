@@ -37,6 +37,8 @@ const DEFAULT_PREFS: AppPreferences = {
   notifyMinutesBefore: 15,
   theme: 'dark',
   noTradeRules: NO_TRADE_RULES.map(r => r.id),
+  language: 'en',
+  riskTolerance: 'medium',
 };
 
 export const useAppStore = create<AppState>()(

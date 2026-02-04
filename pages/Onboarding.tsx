@@ -4,6 +4,7 @@ import { useAppStore } from '../store';
 import { Button } from '../components/ui/Button';
 import { TRADING_PAIRS } from '../constants';
 import { ShieldAlert, CheckCircle2, Globe, Bell } from 'lucide-react';
+import { t } from '../utils';
 
 const Onboarding: React.FC = () => {
   const [step, setStep] = useState(0);
@@ -19,19 +20,19 @@ const Onboarding: React.FC = () => {
         <ShieldAlert size={40} />
       </div>
       <div className="space-y-3">
-        <h1 className="text-3xl font-extrabold tracking-tight">News Guard</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight">{t('welcome_title', preferences.language)}</h1>
         <p className="text-slate-500 dark:text-slate-400 px-6">
-          The ultimate shield for your trading capital. Never miss a critical economic event again.
+          {t('welcome_desc', preferences.language)}
         </p>
       </div>
-      <Button size="lg" onClick={nextStep} fullWidth>Get Started</Button>
+      <Button size="lg" onClick={nextStep} fullWidth>{t('get_started', preferences.language)}</Button>
     </div>,
 
     // Pair Selection
     <div key="step-1" className="space-y-6">
       <div className="space-y-2">
-        <h2 className="text-2xl font-bold">Trading Pairs</h2>
-        <p className="text-slate-500 dark:text-slate-400">Which instruments do you trade?</p>
+        <h2 className="text-2xl font-bold">{t('select_pairs', preferences.language)}</h2>
+        <p className="text-slate-500 dark:text-slate-400">{t('select_pairs_desc', preferences.language)}</p>
       </div>
       <div className="grid grid-cols-2 gap-3">
         {TRADING_PAIRS.map(pair => (
@@ -50,8 +51,8 @@ const Onboarding: React.FC = () => {
         ))}
       </div>
       <div className="flex gap-4">
-        <Button variant="ghost" onClick={prevStep} fullWidth>Back</Button>
-        <Button onClick={nextStep} fullWidth>Continue</Button>
+        <Button variant="ghost" onClick={prevStep} fullWidth>{t('back', preferences.language)}</Button>
+        <Button onClick={nextStep} fullWidth>{t('continue', preferences.language)}</Button>
       </div>
     </div>,
 
@@ -61,9 +62,9 @@ const Onboarding: React.FC = () => {
         <Bell size={40} />
       </div>
       <div className="space-y-3">
-        <h2 className="text-2xl font-bold">Stay Alerted</h2>
+        <h2 className="text-2xl font-bold">{t('stay_alerted', preferences.language)}</h2>
         <p className="text-slate-500 dark:text-slate-400">
-          Get notified 15 minutes before high-impact events and at the start of the day.
+          {t('stay_alerted_desc', preferences.language)}
         </p>
       </div>
       <div className="bg-slate-100 dark:bg-slate-900 rounded-2xl p-6 text-left border border-slate-200 dark:border-slate-800">
@@ -85,8 +86,8 @@ const Onboarding: React.FC = () => {
         </div>
       </div>
       <div className="flex gap-4">
-        <Button variant="ghost" onClick={prevStep} fullWidth>Back</Button>
-        <Button onClick={() => { updatePreferences({ notificationsEnabled: true }); completeOnboarding(); }} fullWidth>Enable & Finish</Button>
+        <Button variant="ghost" onClick={prevStep} fullWidth>{t('back', preferences.language)}</Button>
+        <Button onClick={() => { updatePreferences({ notificationsEnabled: true }); completeOnboarding(); }} fullWidth>{t('enable_finish', preferences.language)}</Button>
       </div>
     </div>
   ];

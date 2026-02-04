@@ -3,12 +3,12 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import AppShell from '../components/layout/AppShell';
 import LiveAnalyst from '../components/LiveAnalyst';
 import { useAppStore } from '../store';
-import { Impact, NewsEvent, SentimentData } from '../types';
-import { formatLocalTime, getImpactColor, getNextNews, formatDuration, decodeBase64, decodeAudioData } from '../utils';
+import { Impact, NewsEvent } from '../types';
+import { formatLocalTime, getImpactColor, getNextNews, decodeBase64, decodeAudioData, t } from '../utils';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { CURRENCY_FLAGS, NO_TRADE_RULES } from '../constants';
-import { Clock, TrendingUp, AlertTriangle, RefreshCw, BrainCircuit, ExternalLink, X, Volume2, Square, Loader2, BarChart3, ChevronRight, Mic, Target, Flame, Activity, Sparkles, LayoutDashboard } from 'lucide-react';
+import { Activity, Sparkles, Target, BrainCircuit, Flame, Mic, Volume2, Square, Loader2, RefreshCw, ChevronRight, ExternalLink, X } from 'lucide-react';
 import { differenceInSeconds, isPast, getHours } from 'date-fns';
 import { fetchLiveNewsWithSearch, getRiskAssessment, generateAudioBriefing, getMarketSentiment, getDailyTradingPlan, getPairRiskScores, getTradeOfTheDay } from '../services/ai';
 
@@ -132,16 +132,6 @@ const Dashboard: React.FC = () => {
     return isHighImpact && (matchesKeyword || n.isNoTrade);
   }), [news, preferences.noTradeRules]);
 
-  const marketSessions = useMemo(() => {
-    const hours = getHours(new Date());
-    return [
-      { name: 'London', open: 8, close: 16, active: hours >= 8 && hours < 16 },
-      { name: 'NY', open: 13, close: 21, active: hours >= 13 && hours < 21 },
-      { name: 'Tokyo', open: 0, close: 8, active: (hours >= 0 && hours < 8) || hours >= 23 },
-      { name: 'Sydney', open: 22, close: 6, active: hours >= 22 || hours < 6 },
-    ];
-  }, []);
-
   const marketStrength = useMemo(() => {
     if (sentiments.length === 0) return 50;
     const sum = sentiments.reduce((acc, s) => {
@@ -165,7 +155,7 @@ const Dashboard: React.FC = () => {
             />
           </div>
           <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isNoTradeDay ? 'text-red-500' : 'text-emerald-500'}`}>
-            {isNoTradeDay ? 'Risk Restricted' : 'Optimal Liquidity'}
+            {isNoTradeDay ? t('risk_restricted', preferences.language) : t('optimal_liquidity', preferences.language)}
           </span>
         </div>
 
@@ -179,7 +169,7 @@ const Dashboard: React.FC = () => {
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-600 dark:text-amber-400">Premium Neural Setup</span>
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-600 dark:text-amber-400">{t('premium_neural_setup', preferences.language)}</span>
                 </div>
                 <h3 className="text-4xl font-black tracking-tighter text-slate-900 dark:text-white">
                   {tradeOfTheDay.pair} <span className={tradeOfTheDay.bias === 'BULLISH' ? 'text-emerald-500' : 'text-red-500'}>{tradeOfTheDay.bias}</span>
@@ -192,15 +182,15 @@ const Dashboard: React.FC = () => {
             </p>
             <div className="grid grid-cols-3 gap-4">
               <div className="glass p-4 rounded-2xl flex flex-col gap-1">
-                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Entry</span>
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('entry', preferences.language)}</span>
                 <span className="text-base font-black tabular-nums">{tradeOfTheDay.levels.entry}</span>
               </div>
               <div className="glass p-4 rounded-2xl flex flex-col gap-1 border-emerald-500/20">
-                <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Take Profit</span>
+                <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">{t('take_profit', preferences.language)}</span>
                 <span className="text-base font-black text-emerald-500 tabular-nums">{tradeOfTheDay.levels.target}</span>
               </div>
               <div className="glass p-4 rounded-2xl flex flex-col gap-1 border-red-500/20">
-                <span className="text-[9px] font-black text-red-500 uppercase tracking-widest">Stop Loss</span>
+                <span className="text-[9px] font-black text-red-500 uppercase tracking-widest">{t('stop_loss', preferences.language)}</span>
                 <span className="text-base font-black text-red-500 tabular-nums">{tradeOfTheDay.levels.stop}</span>
               </div>
             </div>
@@ -211,7 +201,7 @@ const Dashboard: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-6 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Market Bias</h3>
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t('market_bias', preferences.language)}</h3>
               <Activity size={14} className="text-sky-500 animate-pulse" />
             </div>
             <div className="flex items-center gap-6">
@@ -229,7 +219,7 @@ const Dashboard: React.FC = () => {
                 <div className="absolute inset-0 flex items-center justify-center text-sm font-black">{Math.round(marketStrength)}%</div>
               </div>
               <div>
-                <p className="text-xs font-bold text-slate-500 mb-1">Sentiment: <span className={marketStrength > 50 ? 'text-emerald-500' : 'text-red-500'}>{marketStrength > 50 ? 'BULLISH' : 'BEARISH'}</span></p>
+                <p className="text-xs font-bold text-slate-500 mb-1">{t('sentiment', preferences.language)}: <span className={marketStrength > 50 ? 'text-emerald-500' : 'text-red-500'}>{marketStrength > 50 ? 'BULLISH' : 'BEARISH'}</span></p>
                 <p className="text-[10px] text-slate-400 leading-tight">Neural synthesis of retail vs institutional order flow.</p>
               </div>
             </div>
@@ -237,12 +227,12 @@ const Dashboard: React.FC = () => {
 
           <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
             <div className="flex justify-between items-center mb-2">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Institutional Strategy</h3>
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t('institutional_strategy', preferences.language)}</h3>
               <BrainCircuit size={16} className="text-sky-500" />
             </div>
             <p className="text-xs font-medium text-slate-400 mb-4 leading-relaxed">Synthesis of today's macro catalysts and volatility patterns.</p>
             <Button variant="secondary" size="sm" fullWidth onClick={fetchTradingPlan} className="rounded-xl py-3 border-2 font-black uppercase tracking-widest text-[9px]">
-              {isLoadingPlan ? <Loader2 size={12} className="animate-spin" /> : "Synthesize Strategy"}
+              {isLoadingPlan ? <Loader2 size={12} className="animate-spin" /> : t('synthesize', preferences.language)}
             </Button>
           </div>
         </div>
@@ -250,11 +240,11 @@ const Dashboard: React.FC = () => {
         {/* Risk Map */}
         <div className="space-y-3">
           <div className="flex items-center justify-between px-1">
-             <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Volatility Risk Map</h3>
+             <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{t('volatility_risk_map', preferences.language)}</h3>
              <Flame size={14} className="text-orange-500" />
           </div>
           <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4 no-scrollbar">
-            {Object.entries(riskScores).sort((a,b) => b[1] - a[1]).map(([pair, score]) => (
+            {Object.entries(riskScores as Record<string, number>).sort((a,b) => b[1] - a[1]).map(([pair, score]) => (
               <div key={pair} className="flex-shrink-0 w-28 p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] flex flex-col items-center gap-3 hover:border-orange-500/30 transition-all cursor-default">
                 <span className="text-[11px] font-black text-slate-400">{pair}</span>
                 <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
@@ -281,7 +271,7 @@ const Dashboard: React.FC = () => {
               className="h-11 px-6 rounded-2xl bg-sky-500"
             >
               <Mic size={14} className="mr-2" />
-              <span className="text-[10px] font-black uppercase tracking-widest">Desk AI</span>
+              <span className="text-[10px] font-black uppercase tracking-widest">{t('desk_ai', preferences.language)}</span>
             </Button>
             <Button 
               variant={isPlayingBriefing ? "danger" : "secondary"} 
@@ -291,7 +281,7 @@ const Dashboard: React.FC = () => {
               className="h-11 px-6 rounded-2xl"
             >
               {isBriefingLoading ? <Loader2 size={14} className="animate-spin" /> : isPlayingBriefing ? <Square size={14} /> : <Volume2 size={14} />}
-              <span className="ml-2 text-[10px] font-black uppercase tracking-widest">Brief</span>
+              <span className="ml-2 text-[10px] font-black uppercase tracking-widest">{t('brief', preferences.language)}</span>
             </Button>
           </div>
           <Button variant="ghost" size="sm" onClick={handleSync} disabled={isSyncing} className="h-11 px-4 text-slate-500">
@@ -302,7 +292,7 @@ const Dashboard: React.FC = () => {
         {/* Event List */}
         <div className="space-y-4">
           <div className="flex items-center justify-between px-1">
-            <h2 className="font-black text-[10px] uppercase tracking-[0.3em] text-slate-400">Intelligence Stream</h2>
+            <h2 className="font-black text-[10px] uppercase tracking-[0.3em] text-slate-400">{t('intelligence_stream', preferences.language)}</h2>
             <div className="text-slate-400 text-[9px] font-black uppercase tracking-widest">
               {preferences.timezone}
             </div>
@@ -326,12 +316,15 @@ const Dashboard: React.FC = () => {
                   </div>
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xl leading-none">{CURRENCY_FLAGS[n.currency]}</span>
+                      {/* Use AI provided flag, or fallback to currency map */}
+                      <span className="text-2xl leading-none filter drop-shadow-md">
+                        {n.flag || CURRENCY_FLAGS[n.currency]}
+                      </span>
                       <h4 className="font-black text-sm text-slate-900 dark:text-slate-100 group-hover:text-sky-500 line-clamp-1">{n.title}</h4>
                     </div>
                     <div className="flex gap-3 text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                      <span>FCST: {n.forecast || '-'}</span>
-                      <span>PREV: {n.previous || '-'}</span>
+                      <span>{t('fcst', preferences.language)}: {n.forecast || '-'}</span>
+                      <span>{t('prev', preferences.language)}: {n.previous || '-'}</span>
                     </div>
                   </div>
                 </div>
@@ -344,7 +337,7 @@ const Dashboard: React.FC = () => {
         {/* Sources Citation */}
         {groundingSources.length > 0 && (
           <div className="pt-10 border-t border-slate-200 dark:border-slate-800">
-             <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-6 px-1">Institutional Sources</h3>
+             <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-6 px-1">{t('institutional_sources', preferences.language)}</h3>
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {groundingSources.map((chunk, i) => chunk.web && (
                 <a 
@@ -355,7 +348,7 @@ const Dashboard: React.FC = () => {
                     <ExternalLink size={14} className="text-emerald-500 shrink-0" />
                     <span className="text-[10px] font-black text-slate-600 dark:text-slate-300 truncate">{chunk.web.title}</span>
                   </div>
-                  <Badge variant="success" className="opacity-50 shrink-0">Verified</Badge>
+                  <Badge variant="success" className="opacity-50 shrink-0">{t('verified', preferences.language)}</Badge>
                 </a>
               ))}
              </div>
@@ -370,7 +363,7 @@ const Dashboard: React.FC = () => {
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
               <div className="flex items-center gap-3">
                 {isPlanOpen ? <Target size={20} className="text-sky-500" /> : <BrainCircuit size={20} className="text-sky-500" />}
-                <h3 className="font-black text-[10px] uppercase tracking-[0.3em]">{isPlanOpen ? 'Strategic Synthesis' : 'Volatility Intelligence'}</h3>
+                <h3 className="font-black text-[10px] uppercase tracking-[0.3em]">{isPlanOpen ? t('institutional_strategy', preferences.language) : t('volatility_risk_map', preferences.language)}</h3>
               </div>
               <button onClick={() => { setSelectedEvent(null); setIsPlanOpen(false); }} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800"><X size={20} /></button>
             </div>
@@ -379,7 +372,7 @@ const Dashboard: React.FC = () => {
               {(loadingAssessment || isLoadingPlan) ? (
                 <div className="py-20 flex flex-col items-center gap-6">
                   <Loader2 size={32} className="text-sky-500 animate-spin" />
-                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Running Institutional Models...</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">{t('running_models', preferences.language)}</p>
                 </div>
               ) : (
                 <div className="prose prose-slate dark:prose-invert max-w-none text-sm font-medium leading-relaxed whitespace-pre-wrap">
@@ -390,7 +383,7 @@ const Dashboard: React.FC = () => {
 
             <div className="p-8">
               <Button variant="primary" size="lg" fullWidth onClick={() => { setSelectedEvent(null); setIsPlanOpen(false); }} className="rounded-2xl py-5 shadow-xl shadow-sky-500/20 text-[10px] font-black uppercase tracking-[0.2em]">
-                Acknowledge Directive
+                {t('acknowledge', preferences.language)}
               </Button>
             </div>
           </div>
